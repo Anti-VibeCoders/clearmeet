@@ -1,4 +1,4 @@
-from fastapi import APiRouter, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from typing import List
 from models.user  import UserRegister
