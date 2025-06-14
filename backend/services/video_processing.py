@@ -22,7 +22,7 @@ class VideoProcessor:
 
     def extract_audio(self, video_path: str) -> str:
         """Extract audio from the video and return route from the audio file"""
-        audio_path = video_path.replace(".mp4", ".wav")
+        audio_path = video_path.replace(".mp4", ".mp3")
         video = VideoFileClip(video_path)
-        video.audio.write_audiofile(audio_path)
+        video.audio.write_audiofile(audio_path, code="mp3")
         return audio_path
