@@ -1,43 +1,67 @@
-from motor.motor_asyncio import AsyncIOMotorClient
-import asyncio
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy import Index
 
-class MongoDBConnection:
+# Configura la URL de conexión a PostgreSQL
+DATABASE_URL = "postgresql+asyncpg://user:password@localhost:5432/meetings_db"
+
+# Base para los modelos
+class Base(DeclarativeBase):
+    pass
+
+class PostgreSQLConnection:
     def __init__(self):
+        self.engine = None
         self.db = None
 
     async def connect(self):
         try:
-            self.client = AsyncIOMotorClient("mongodb://localhost:27017/")
-            self.db = self.client["MongoDB_IA"]
-            await self.db.user.create_index([("email", 1)], unique=True)
-            await self.db.meet.create_index([("title", 1)])
-            print("Conexión a MongoDB establecida correctamente")
+            # Crear el motor asíncrono
+            self.engine = create_async_engine(DATABASE_URL, echo=True)
+            # Crear una fábrica de sesiones asíncronas
+            self.db = sessionmaker(self.engine, class_=AsyncSession, expire_on_commit=False)
+            # Crear las tablas definidas en los modelos
+            async with self.engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            print("Conexión a PostgreSQL establecida correctamente")
             return self.db
         except Exception as e:
-            print("Error connecting to MongoDB: ", e)
+            print(f"Error connecting to PostgreSQL: {e}")
             return None
 
     async def get_db(self):
         if self.db is None:
             self.db = await self.connect()
-        return self.db
+        async with self.db() as session:
+            yield session
 
-    @property
-    async def user_collection(self):
-        db = await self.get_db()
-        return db.user
-
-    @property
-    async def meet_collection(self):
-        db = await self.get_db()
-        return db.meet
+    async def dispose(self):
+        if self.engine:
+            await self.engine.dispose()
 
 # Instancia global (mejor práctica: inyectar esta dependencia en FastAPI)
-mongo_connection = MongoDBConnection()
+pg_connection = PostgreSQLConnection()
 
 if __name__ == "__main__":
+    import asyncio
+    from sqlalchemy import Column, Integer, String, JSONB
+
+    # Definir un modelo básico para pruebas
+    class Meeting(Base):
+        __tablename__ = "meetings"
+        id = Column(Integer, primary_key=True, index=True)
+        title = Column(String, nullable=False, index=True)
+        type = Column(String, nullable=False)
+        date = Column(String, nullable=False)
+        duration = Column(String, nullable=False)
+        data = Column(JSONB, nullable=False)
+        __table_args__ = (Index('idx_meeting_data', data, postgresql_using='gin'),)
+
     async def test_connection():
-        db = await mongo_connection.get_db()
-        print("Colección de usuarios:", await mongo_connection.user_collection)
+        async for session in pg_connection.get_db():
+            print("Conexión a la base de datos:", session)
+            # Consulta de prueba para verificar la tabla
+            result = await session.execute("SELECT * FROM meetings LIMIT 1")
+            print("Resultado de la consulta de prueba:", result.fetchall())
 
     asyncio.run(test_connection())
