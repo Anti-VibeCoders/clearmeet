@@ -9,7 +9,7 @@ nltk.download('vader_lexicon')
 
 class NLPProcessor:
     def __init__(self):
-        self.nlp = spacy.load("en_core_news_lg")
+        self.nlp = spacy.load("en_core_web_lg")
         self.sia = SentimentIntensityAnalyzer()
 
     def analyze_transcript(self, transcript: List[Dict]) -> Dict:

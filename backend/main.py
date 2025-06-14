@@ -1,7 +1,7 @@
 from doctest import debug
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.v1 import auth
+from api.v1 import auth, meetings
 from db.mongo import MongoDBConnection
 
 app = FastAPI(
@@ -22,4 +22,8 @@ app.add_middleware(
 app.include_router(
     auth.router,
     prefix="/api",
+)
+app.include_router(
+    meetings.router,
+    prefix="/api/meet",
 )

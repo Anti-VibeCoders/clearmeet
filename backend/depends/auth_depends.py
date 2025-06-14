@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from jose import jwt
 from pydantic import EmailStr
+from fastapi import HTTPException
 from typing import Optional
 from models.user import UserRegister
 from db.mongo import mongo_connection  
@@ -18,6 +19,11 @@ def get_password_hash(password: str) -> str:
 
 # Obtener usuario desde MongoDB
 async def get_user(email: EmailStr) -> Optional[UserRegister]:
+    if not mongo_connection.db:
+        raise HTTPException(
+            status_code=500,
+            detail="Base de datos no inicializada"
+        )
     user = await (await mongo_connection.user_collection).find_one({"email": email})
     return UserRegister(**user) if user else None
 

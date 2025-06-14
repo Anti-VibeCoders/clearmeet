@@ -6,8 +6,8 @@ from typing import List, Dict
 
 class AudioAnalyzer:
     def __init__(self, api_key: str):
-        self.api_key = os.getenv(api_key)
-        self.api_url = os.getenv(api_url)
+        self.api_key = os.getenv("api_key")
+        self.api_url = os.getenv("api_url")
     def transcribe_audio(self, audio_path: str, language: str = "en-EN") -> List[Dict]:
         """Transcribes audio using lemonfox.ai with time marks."""
         audio = AudioSegment.from_wav(audio_path)

@@ -1,19 +1,19 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
-from app.services.video_processing import VideoProcessor
-from app.services.audio_analysis import AudioAnalyzer
-from app.services.nlp_processing import NLPProcessor
-from app.models.meeting import MeetingAnalysis
+from services.video_processing import VideoProcessor
+from services.audio_analysis import AudioAnalyzer
+from services.nlp_processing import NLPProcessor
+from models.meeting import Meeting
 import os
 from datetime import datetime
-from mongo import Meet_Collection
+from db.mongo import MongoDBConnection
 
 router = APIRouter()
 video_processor = VideoProcessor()
-audio_analyzer = AudioAnalyzer()
+audio_analyzer = AudioAnalyzer(os.getenv("AI_KEY"))
 nlp_processor = NLPProcessor()
 
-@router.post("/analyze-meeting", response_model=MeetingAnalysis)
+@router.post("/analyze-meeting", response_model=Meeting)
 async def analyze_meeting_video(
     background_tasks: BackgroundTasks,
     video_file: UploadFile = File(...)
@@ -70,7 +70,7 @@ async def full_processing_pipeline(video_path: str, filename: str):
             "summary": self._generate_summary(transcript, analysis)
         }
         # Save in MongoDB
-        await Meet_Collection.insert_one(meeting_data)
+        await MongoDBConnection.meet_collection.insert_one(meeting_data)
         
         # Here you would save in the database
         # await save_to_database(meeting_data)
