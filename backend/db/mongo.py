@@ -4,15 +4,13 @@ import asyncio
 class MongoDBConnection:
     def __init__(self):
         self.db = None
-        self.loop = asyncio.get_event_loop()
 
     async def connect(self):
         try:
             client = AsyncIOMotorClient("mongodb://localhost:27017/")
             self.db = client["MongoDB_IA"]
-            await self.db.usuarios.create_index([("email", 1)], unique=True)
-            await self.db.tasks.create_index([("title", 1)])
-            await self.db.archive_text.create_index([("title", 1)])
+            await self.db.user.create_index([("email", 1)], unique=True)
+            await self.db.meet.create_index([("title", 1)])
             print("Conexión a MongoDB establecida correctamente")
             return self.db
         except Exception as e:
@@ -24,22 +22,22 @@ class MongoDBConnection:
             self.db = await self.connect()
         return self.db
 
-# Instancia global de la conexión
+    @property
+    async def user_collection(self):
+        db = await self.get_db()
+        return db.user
+
+    @property
+    async def meet_collection(self):
+        db = await self.get_db()
+        return db.meet
+
+# Instancia global (mejor práctica: inyectar esta dependencia en FastAPI)
 mongo_connection = MongoDBConnection()
 
-# Colecciones globales (se inicializan después de conectar)
-User_Collection = None
-Meet_Collection = None
-Archive_Collection = None
-
-async def init_db():
-    global User_Collection, Meet_Collection, Archive_Collection
-    db = await mongo_connection.get_db()
-    if db is not None:
-        User_Collection = db.usuarios
-        Meet_Collection = db.tasks
-        Archive_Collection = db.archive_text
-
-# Ejecutar la inicialización en un entorno asíncrono
 if __name__ == "__main__":
-    asyncio.run(init_db())
+    async def test_connection():
+        db = await mongo_connection.get_db()
+        print("Colección de usuarios:", await mongo_connection.user_collection)
+
+    asyncio.run(test_connection())

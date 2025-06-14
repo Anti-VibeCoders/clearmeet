@@ -2,7 +2,7 @@ from doctest import debug
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.v1 import auth
-
+from db.mongo import MongoDBConnection
 
 app = FastAPI(
     title="ClearMeet",
@@ -10,6 +10,7 @@ app = FastAPI(
     debug=True,
     description="ClearMeet API",
 )
+mongo_connection = MongoDBConnection()
 
 app.add_middleware(
     CORSMiddleware,

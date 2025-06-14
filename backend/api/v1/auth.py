@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 from typing import List
 from models.user  import UserRegister, UserLogin, Token
 from depends.auth_depends import get_user, get_password_hash
-from db.mongo import User_Collection
+from db.mongo import MongoDBConnection
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -19,7 +19,7 @@ async def register(user: UserRegister):
         "mail": user.email,
         "hashed_password": hashed_password
     }
-    await User_Collection.insert_one(user_dict)
+    await MongoDBConnection.user_collection.insert_one(user_dict)
     return {"msg": "Successfully registered user"}
 
 @router.post("/login", response_model=Token)
