@@ -7,8 +7,8 @@ class MongoDBConnection:
 
     async def connect(self):
         try:
-            client = AsyncIOMotorClient("mongodb://localhost:27017/")
-            self.db = client["MongoDB_IA"]
+            self.client = AsyncIOMotorClient("mongodb://localhost:27017/")
+            self.db = self.client["MongoDB_IA"]
             await self.db.user.create_index([("email", 1)], unique=True)
             await self.db.meet.create_index([("title", 1)])
             print("Conexión a MongoDB establecida correctamente")

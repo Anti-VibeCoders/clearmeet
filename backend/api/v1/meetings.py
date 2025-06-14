@@ -3,17 +3,17 @@ from fastapi.responses import JSONResponse
 from services.video_processing import VideoProcessor
 from services.audio_analysis import AudioAnalyzer
 from services.nlp_processing import NLPProcessor
-from models.meeting import Meeting
+from models.meeting import MeetingAnalysis
 import os
 from datetime import datetime
-from db.mongo import MongoDBConnection
+from db.mongo import mongo_connection
 
 router = APIRouter()
 video_processor = VideoProcessor()
-audio_analyzer = AudioAnalyzer(os.getenv("AI_KEY"))
+audio_analyzer = AudioAnalyzer()
 nlp_processor = NLPProcessor()
 
-@router.post("/analyze-meeting", response_model=Meeting)
+@router.post("/analyze-meeting", response_model=MeetingAnalysis)
 async def analyze_meeting_video(
     background_tasks: BackgroundTasks,
     video_file: UploadFile = File(...)
@@ -70,7 +70,7 @@ async def full_processing_pipeline(video_path: str, filename: str):
             "summary": self._generate_summary(transcript, analysis)
         }
         # Save in MongoDB
-        await MongoDBConnection.meet_collection.insert_one(meeting_data)
+        await mongo_connection.meet_collection.insert_one(meeting_data)
         
         # Here you would save in the database
         # await save_to_database(meeting_data)
