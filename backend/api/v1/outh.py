@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from typing import List
-from models.user  import UserRegister
+from models.user  import UserRegister, UserLogin, Token
 from depends.outh_depends import get_user, get_password_hash
 from db.mongo import users_collection
 
@@ -9,7 +9,7 @@ router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 @router.post("/register")
-async def register(user: UseUserRegister):
+async def register(user: UserRegister):
     existing_user = await get_user(user.email)
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
