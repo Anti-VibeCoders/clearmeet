@@ -3,25 +3,26 @@ from fastapi.security import OAuth2PasswordBearer
 from typing import List
 from models.user  import UserRegister, UserLogin, Token
 from depends.outh_depends import get_user, get_password_hash
-from db.mongo import users_collection
+from db.mongo import User_Collection
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-@router.post("/register")
+@router.post("/register") 
 async def register(user: UserRegister):
     existing_user = await get_user(user.email)
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     hashed_password = get_password_hash(user.password)
     user_dict = {
+        "name": user.name,
         "mail": user.email,
         "hashed_password": hashed_password
     }
-    await users_collection.insert_one(user_dict)
+    await User_Collection.insert_one(user_dict)
     return {"msg": "Successfully registered user"}
 
-@app.post("/login", response_model=Token)
+@router.post("/login", response_model=Token)
 async def login(user: UserLogin):
     db_user = await get_user(user.email)
     if not db_user:
