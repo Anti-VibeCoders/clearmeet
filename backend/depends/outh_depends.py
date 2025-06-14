@@ -1,4 +1,5 @@
 from datetime import timedelta
+from mongo import User_Collection
 
 
 def verify_password(plain_password, hashed_password):
@@ -7,8 +8,8 @@ def verify_password(plain_password, hashed_password):
 def get_password_hash(password):
     return pwd_context.hash(password)
 
-async def get_user(email: str):
-    user = await users_collection.find_one({"email": email})
+async def get_user(email: EmailStr):
+    user = await User_Collection.find_one({"email": email})
     if user:
         return UserInDB(**user)
     return None
