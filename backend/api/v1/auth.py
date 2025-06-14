@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from typing import List
 from models.user  import UserRegister, UserLogin, Token
-from depends.outh_depends import get_user, get_password_hash
+from depends.auth_depends import get_user, get_password_hash
 from db.mongo import User_Collection
 
 router = APIRouter()

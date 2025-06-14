@@ -1,7 +1,7 @@
 from doctest import debug
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.v1 import outh
+from api.v1 import auth
 
 
 app = FastAPI(
@@ -19,6 +19,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(
-    outh.router,
+    auth.router,
     prefix="/api",
 )
