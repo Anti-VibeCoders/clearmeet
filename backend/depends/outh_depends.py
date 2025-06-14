@@ -1,6 +1,6 @@
 from datetime import timedelta
-from mongo import User_Collection
-
+from pydantic import EmailStr
+from db.mongo import User_Collection
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)

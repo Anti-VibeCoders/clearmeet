@@ -1,29 +1,45 @@
-# Configuración
-from pymongo import MongoClient
-from pymongo.errors import ConnectionError 
+from motor.motor_asyncio import AsyncIOMotorClient
+import asyncio
 
-SECRET_KEY = "your-secret-key"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-def connect():
-    try:
-        client = MongoClient("mongodb://localhost:27017/")
-        db = client["MongoDB_IA"]
-        db.usuarios.create_index([("email", 1)], unique=True)
-        db.tasks.create_index([("title", 1)])
-        db.archive_text.create_index([("title", 1)])
-        return db
-    except ConnectionError as e:
-        print("Error connecting to MongoD: ", e)
-    except :
-        print("Error connecting to MongoDB:")
-    finally:
-        print("Connetion finished")
+class MongoDBConnection:
+    def __init__(self):
+        self.db = None
+        self.loop = asyncio.get_event_loop()
 
-db = connect()
+    async def connect(self):
+        try:
+            client = AsyncIOMotorClient("mongodb://localhost:27017/")
+            self.db = client["MongoDB_IA"]
+            await self.db.usuarios.create_index([("email", 1)], unique=True)
+            await self.db.tasks.create_index([("title", 1)])
+            await self.db.archive_text.create_index([("title", 1)])
+            print("Conexión a MongoDB establecida correctamente")
+            return self.db
+        except Exception as e:
+            print("Error connecting to MongoDB: ", e)
+            return None
 
-User_Collection = db.User if db is not None else None
-Task_Collection = db.Task if db is not None else None
-Archive_Text_Collection = db.Archive_Text if db is not None else None
+    async def get_db(self):
+        if self.db is None:
+            self.db = await self.connect()
+        return self.db
 
+# Instancia global de la conexión
+mongo_connection = MongoDBConnection()
 
+# Colecciones globales (se inicializan después de conectar)
+User_Collection = None
+Meet_Collection = None
+Archive_Collection = None
+
+async def init_db():
+    global User_Collection, Meet_Collection, Archive_Collection
+    db = await mongo_connection.get_db()
+    if db is not None:
+        User_Collection = db.usuarios
+        Meet_Collection = db.tasks
+        Archive_Collection = db.archive_text
+
+# Ejecutar la inicialización en un entorno asíncrono
+if __name__ == "__main__":
+    asyncio.run(init_db())

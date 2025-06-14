@@ -6,6 +6,7 @@ from app.services.nlp_processing import NLPProcessor
 from app.models.meeting import MeetingAnalysis
 import os
 from datetime import datetime
+from mongo import Meet_Collection
 
 router = APIRouter()
 video_processor = VideoProcessor()
@@ -68,6 +69,8 @@ async def full_processing_pipeline(video_path: str, filename: str):
             "transcript": transcript,
             "summary": self._generate_summary(transcript, analysis)
         }
+        # Save in MongoDB
+        await Meet_Collection.insert_one(meeting_data)
         
         # Here you would save in the database
         # await save_to_database(meeting_data)
