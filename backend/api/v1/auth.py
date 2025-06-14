@@ -34,3 +34,14 @@ async def login(user: UserLogin):
         data={"sub": db_user.email}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.get("/user/{email}")
+async def read_user(email: EmailStr):
+    db = await mongo_connection.get_db()
+    user_collection = db.usuarios
+    user = await get_user(email, user_collection)
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    return user
