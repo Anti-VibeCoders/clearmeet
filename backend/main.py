@@ -1,9 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
-from database import pg_connection, Base, engine
-from auth import router as auth_router
-from meetings import router as meetings_router
+from api.v1 import auth, meetings
+from db.db import engine, Base
 
 app = FastAPI(
     title="ClearMeet",
@@ -34,11 +33,11 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     try:
-        await pg_connection.dispose()
+        await db_connection.dispose()
         print("Conexión a PostgreSQL cerrada")
     except Exception as e:
         print(f"Error al cerrar conexión: {e}")
 
 # Incluir los routers
-app.include_router(auth_router, prefix="/api")
-app.include_router(meetings_router, prefix="/api/meet")
+app.include_router(auth.router, prefix="/api")
+app.include_router(meetings.router, prefix="/api/meet")

@@ -4,22 +4,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from services.video_processing import VideoProcessor
 from services.audio_analysis import AudioAnalyzer
 from services.nlp_processing import NLPProcessor
-from meeting import MeetingCreate, MeetingResponse
+from schemas.meeting import MeetingCreate, MeetingResponse
 from models import Meeting
-from database import pg_connection
+from db.db import get_db
 import os
 from datetime import datetime
 
 router = APIRouter()
 video_processor = VideoProcessor()
-audio_analyzer = AudioAnalyzer()
+audio_analyzer = AudioAnalyzer(os.getenv("AI_KEY"))
 nlp_processor = NLPProcessor()
 
 @router.post("/analyze-meeting", response_model=dict)
 async def analyze_meeting_video(
     background_tasks: BackgroundTasks,
     video_file: UploadFile = File(...),
-    db: AsyncSession = Depends(pg_connection.get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         video_path, filename = await video_processor.save_uploaded_video(video_file)
