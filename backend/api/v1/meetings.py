@@ -1,32 +1,34 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 from services.video_processing import VideoProcessor
 from services.audio_analysis import AudioAnalyzer
 from services.nlp_processing import NLPProcessor
-from models.meeting import Meeting
+from meeting import MeetingCreate, MeetingResponse
+from models import Meeting
+from database import pg_connection
 import os
 from datetime import datetime
-from db.mongo import MongoDBConnection
 
 router = APIRouter()
 video_processor = VideoProcessor()
 audio_analyzer = AudioAnalyzer(os.getenv("AI_KEY"))
 nlp_processor = NLPProcessor()
 
-@router.post("/analyze-meeting", response_model=Meeting)
+@router.post("/analyze-meeting", response_model=dict)
 async def analyze_meeting_video(
     background_tasks: BackgroundTasks,
-    video_file: UploadFile = File(...)
+    video_file: UploadFile = File(...),
+    db: AsyncSession = Depends(pg_connection.get_db)
 ):
     try:
-        # 1. Save the video
         video_path, filename = await video_processor.save_uploaded_video(video_file)
         
-        # 2. Process in the background
         background_tasks.add_task(
             full_processing_pipeline,
             video_path,
-            filename
+            filename,
+            db
         )
         
         return JSONResponse(
@@ -37,47 +39,51 @@ async def analyze_meeting_video(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-async def full_processing_pipeline(video_path: str, filename: str):
+async def full_processing_pipeline(video_path: str, filename: str, db: AsyncSession):
     """Complete processing pipeline"""
     try:
-        # 1. Extract video audio
         audio_path = video_processor.extract_audio(video_path)
         
-        # 2. Transcribe Audio to Text
         transcript = audio_analyzer.transcribe_audio(audio_path)
         
-        # 3. Analyze the text
         analysis = nlp_processor.analyze_transcript(transcript)
         
-        # 4. Create Complete Meeting Purpose
-        meeting_data = {
-            "title": f"Analyzed meeting - {filename}",
-            "type": "video",
-            "date": datetime.now().strftime("%d de %B, %Y"),
-            "duration": "00:45:00",  # Calculate real duration
-            "participants": [],  # Implement participants detection
-            "sentiment": {
+        meeting_data = MeetingCreate(
+            title=f"Analyzed meeting - {filename}",
+            type="video",
+            date=datetime.now().strftime("%d de %B, %Y"),
+            duration="00:45:00",
+            participants=[],
+            sentiment={
                 "overall": analysis["sentiment"]["polarity"],
                 "positive": int(analysis["sentiment"]["polarity"] * 100),
-                "neutral": 30,  # Example values
+                "neutral": 30,
                 "negative": 10,
-                "timeline": self._generate_sentiment_timeline(transcript)
+                "timeline": []
             },
-            "keywords": analysis["keywords"],
-            "topics": analysis["topics"],
-            "key_moments": analysis["key_moments"],
-            "transcript": transcript,
-            "summary": self._generate_summary(transcript, analysis)
-        }
-        # Save in MongoDB
-        await MongoDBConnection.meet_collection.insert_one(meeting_data)
+            keywords=analysis["keywords"],
+            topics=analysis["topics"],
+            keyMoments=analysis["key_moments"],
+            transcript=transcript,
+            summary=""
+        )
         
-        # Here you would save in the database
-        # await save_to_database(meeting_data)
+        db_meeting = Meeting(
+            title=meeting_data.title,
+            type=meeting_data.type,
+            date=meeting_data.date,
+            duration=meeting_data.duration,
+            data=meeting_data.model_dump(exclude={"title", "type", "date", "duration"})
+        )
+        db.add(db_meeting)
+        await db.commit()
+        await db.refresh(db_meeting)
         
     except Exception as e:
         print(f"Processing error: {e}")
+        await db.rollback()
     finally:
-        # Cleaning
-        os.remove(audio_path)
-        os.remove(video_path)
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+        if os.path.exists(video_path):
+            os.remove(video_path)

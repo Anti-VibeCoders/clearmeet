@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from typing import List
+from pydantic import EmailStr
 from models.user  import UserRegister, UserLogin, Token
 from depends.auth_depends import get_user, get_password_hash
-from db.mongo import MongoDBConnection
+from db.mongo import mongo_connection
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -19,7 +20,7 @@ async def register(user: UserRegister):
         "mail": user.email,
         "hashed_password": hashed_password
     }
-    await MongoDBConnection.user_collection.insert_one(user_dict)
+    await mongo_connection.user_collection.insert_one(user_dict)
     return {"msg": "Successfully registered user"}
 
 @router.post("/login", response_model=Token)
