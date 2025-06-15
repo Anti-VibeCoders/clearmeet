@@ -5,7 +5,7 @@ from services.video_processing import VideoProcessor
 from services.audio_analysis import AudioAnalyzer
 from services.nlp_processing import NLPProcessor
 from schemas.meeting import MeetingCreate, MeetingResponse
-from models import Meeting
+from models.meeting import Meeting 
 from db.db import get_db
 import os
 from datetime import datetime

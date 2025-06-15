@@ -1,48 +1,72 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.db import get_db
-from models import User
+from models.user import User
+from sqlalchemy.future import select
+from depends.auth_depends import get_password_hash, verify_password, create_access_token
 from schemas.user import UserRegister, UserLogin, Token
-from pydantic import EmailStr
+from datetime import timedelta
+from schemas.Settings import settings
 
 router = APIRouter()
 
-@router.post("/register")
+@router.post("/register", response_model=Token)
 async def register(
-    user: UserRegister,
+    user_data: UserRegister,
     db: AsyncSession = Depends(get_db)
 ):
-    existing_user = await get_user(user.email, db)
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+    # Verificar si el usuario ya existe
+    result = await db.execute(select(User).where(User.email == user_data.email))
+    existing_user = result.scalar_one_or_none()
     
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+    
+    # Crear nuevo usuario
+    hashed_password = get_password_hash(user_data.password)
     new_user = User(
-        name=user.name,
-        email=user.email,
-        hashed_password=get_password_hash(user.password)
+        email=user_data.email,
+        hashed_password=hashed_password,
+        is_active=True
     )
+    
     db.add(new_user)
     await db.commit()
-    return {"msg": "User registered successfully"}
+    await db.refresh(new_user)
+    
+    # Generar token
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": new_user.email},
+        expires_delta=access_token_expires
+    )
+    
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/login", response_model=Token)
 async def login(
-    user: UserLogin,
+    user_data: UserLogin,
     db: AsyncSession = Depends(get_db)
 ):
-    db_user = await get_user(user.email, db)
-    if not db_user or not verify_password(user.password, db_user.hashed_password):
-        raise HTTPException(status_code=400, detail="Incorrect credentials")
+    # Obtener usuario
+    result = await db.execute(select(User).where(User.email == user_data.email))
+    user = result.scalar_one_or_none()
     
-    access_token = create_access_token(data={"sub": db_user.email})
+    if not user or not verify_password(user_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Generar token
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email},
+        expires_delta=access_token_expires
+    )
+    
     return {"access_token": access_token, "token_type": "bearer"}
-
-@router.get("/user/{email}")
-async def read_user(
-    email: EmailStr,
-    db: AsyncSession = Depends(get_db)
-):
-    user = await get_user(email, db)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user

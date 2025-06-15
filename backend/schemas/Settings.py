@@ -34,13 +34,16 @@ class Settings(BaseSettings):
         default=["*"],  # Ajustar en producción
         description="Orígenes permitidos para CORS"
     )
-    
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ALGORITHM: str = "HS256"
+
     class Config:
         env_file = ".env"  # Ruta relativa más simple
         env_file_encoding = 'utf-8'
         extra = 'ignore'
 
-        env_prefix = "FLOMECO_"  # Todas las vars deben empezar con FLOMECO_
+        env_prefix = "ClearMeet_"  # Todas las vars deben empezar con FLOMECO_
         case_sensitive = True  # Distingue mayúsculas/minúsculas
+        
 
 settings = Settings()
